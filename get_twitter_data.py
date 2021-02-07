@@ -7,11 +7,11 @@ from datetime import datetime, timedelta
 
 def load_angels(API, CONNECTION, angels):
     connection = psycopg2.connect(
-                                user="drew",
-                                password=authentication.DB_PW,
-                                host="127.0.0.1",
-                                port="5432",
-                                database="twitter")
+                                  user="drew",
+                                  password=authentication.DB_PW,
+                                  host="127.0.0.1",
+                                  port="5432",
+                                  database="twitter")
     
     cursor = connection.cursor()
     insert_query = "INSERT INTO angels(id, handle, name) VALUES('{0}', '{1}', '{2}') ON CONFLICT DO NOTHING"
@@ -41,22 +41,22 @@ def get_tweets(API, CONNECTION, days=7):
             if DATE_CUTOFF > favorite.created_at:
                 break
             
-            tweet_insert = "INSERT INTO tweet(id, tweet, created_at, author_id, liked_by_id) VALUES({0}, '{1}', '{2}', {3},  {4}) ON CONFLICT DO NOTHING"
-            founder_insert = "INSERT INTO potential_founders(id, handle, name, description) VALUES({0}, '{1}', '{2}', '{3}') ON CONFLICT DO NOTHING"
+            tweet_insert = "INSERT INTO tweets(id, tweet, created_at, author_id, liked_by_id) VALUES(%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING"
+            founder_insert = "INSERT INTO potential_founders(id, handle, name, description) VALUES(%s, %s, %s, %s) ON CONFLICT DO NOTHING"
             
-            founder = founder_insert.format(favorite.user.id,
-                                            favorite.user.screen_name,
-                                            favorite.user.name,
-                                            favorite.user.description)
-            cursor.execute(founder)
+            cursor.execute(founder_insert, (favorite.user.id,
+                                     favorite.user.screen_name,
+                                     favorite.user.name,
+                                     favorite.user.description))
+
             CONNECTION.commit()
 
-            tweet = tweet_insert.format(favorite.id,
-                                        favorite.text,
-                                        favorite.created_at,
-                                        favorite.user.id,
-                                        angel[0])
-            cursor.execute(tweet)
+            cursor.execute(tweet_insert, (favorite.id,
+                                   favorite.text,
+                                   favorite.created_at,
+                                   favorite.user.id,
+                                   angel[0]))
+            
             CONNECTION.commit()
     cursor.close()
 
@@ -74,13 +74,12 @@ if __name__ == '__main__':
                                   port="5432",
                                   database="twitter")
 
-
-    if 'angels' in args or len(args)==0: 
+    if '-a' in args or len(args)==0: 
         with open('./angels.json') as f:
             angels = json.load(f)
             load_angels(api, connection, angels)
     
-    if 'tweets' in args or len(args)==0:
+    if '-t' in args or len(args)==0:
         get_tweets(api, connection)
 
     connection.close()

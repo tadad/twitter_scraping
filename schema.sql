@@ -11,7 +11,7 @@ CREATE TABLE potential_founders (
     description VARCHAR(300)
 );
 
-CREATE TABLE tweet (
+CREATE TABLE tweets (
     id BIGINT PRIMARY KEY,
     tweet TEXT, 
     created_at DATE,
