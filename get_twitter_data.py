@@ -26,7 +26,7 @@ def load_angels(API, CONNECTION, angels):
     cursor.close()
 
 
-def get_tweets(API, CONNECTION, days=7):
+def load_tweets(API, CONNECTION, days=7):
     DATE_CUTOFF = datetime.now() - timedelta(days=days)
     
     cursor = connection.cursor()
@@ -80,6 +80,6 @@ if __name__ == '__main__':
             load_angels(api, connection, angels)
     
     if '-t' in args or len(args)==0:
-        get_tweets(api, connection)
+        load_tweets(api, connection)
 
     connection.close()
