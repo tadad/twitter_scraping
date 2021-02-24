@@ -2,10 +2,16 @@ import sys
 import tweepy
 import json
 import psycopg2
-import authentication
+import authentication # local environment config stuff
 from datetime import datetime, timedelta
 
-def load_angels(API, CONNECTION, angels):
+def load_angels(API, angels):
+    """
+    Takes in a Tweepy API and a list of angels and inserts it into the database
+    @param API: Tweepy API instance
+    @param angels: list of angels, organized as [{"handle":"name"}, ...]
+    @returns: none
+    """
     connection = psycopg2.connect(
                                   user="drew",
                                   password=authentication.DB_PW,
@@ -27,6 +33,13 @@ def load_angels(API, CONNECTION, angels):
 
 
 def load_tweets(API, CONNECTION, days=7):
+    """
+    Gets all liked tweets from the angels table in the database.
+    @param API: tweepy API instance
+    @param CONNECTION: a connection to the postgres database using psycopg2
+    @param days: number of days offset to get the likes from
+    @returns: nothing
+    """
     DATE_CUTOFF = datetime.now() - timedelta(days=days)
     
     cursor = connection.cursor()
@@ -60,6 +73,19 @@ def load_tweets(API, CONNECTION, days=7):
             CONNECTION.commit()
     cursor.close()
 
+def get_founders(CONNECTION):
+    """
+    @param CONNECTION: A connection to the postgres database using psycopg2
+    @returns a list of accounts that the angels have liked in the past 7 days
+    """
+    cursor = CONNECTION.cursor()
+    cursor.execute(open('src/sql/get_names.sql', 'r').read())
+    data = cursor.fetchall()
+
+    cursor.close()
+    return data
+  
+
 if __name__ == '__main__':
     args = sys.argv[1:]
     
@@ -75,11 +101,30 @@ if __name__ == '__main__':
                                   database="twitter")
 
     if '-a' in args or len(args)==0: 
-        with open('./angels.json') as f:
+        with open('../data/angels.json') as f:
             angels = json.load(f)
             load_angels(api, connection, angels)
-    
+
     if '-t' in args or len(args)==0:
         load_tweets(api, connection)
+
+    if '-g' in args or len(args)==0:
+        founders = get_founders(connection)
+        today = datetime.today().strftime('%Y-%m-%d')
+        
+        with open('src/data/{0}.json'.format(today), 'w+') as out:
+            all_data = {'data': []}
+            for row in founders:
+                data = {
+                    'angel_name':row[0],
+                    'angel_handle':row[1],
+                    'name': row[2],
+                    'handle': row[3],
+                    'bio': row[4], 
+                    'date_liked': str(row[5])
+                }
+                all_data['data'].append(data)
+
+            json.dump(all_data, out)    
 
     connection.close()
